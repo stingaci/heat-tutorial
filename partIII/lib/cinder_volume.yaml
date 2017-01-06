@@ -1,0 +1,36 @@
+heat_template_version: 2015-10-15
+
+parameters:
+
+  volume_size:
+    label: Cinder Volume Size
+    description: Volume size for the cinder volume that will be mounted to nova instance
+    type: number
+    default: 1
+    constraints:
+      - range: { min: 1, max: 1024 }
+        description: must be between 1 and 1024 Gb.
+
+  availability_zone:
+    label: Availability Zone for volume deployment 
+    type: string 
+    default: nova
+
+  instance:
+    label: The instance that should be attached to this volume
+    type: string 
+
+resources:
+
+  cinder_volume:
+    type: OS::Cinder::Volume
+    properties:
+      size: { get_param: volume_size }
+      availability_zone: { get_param: availability_zone }
+
+  volume_attachment:
+    type: OS::Cinder::VolumeAttachment
+    properties:
+      volume_id: { get_resource: cinder_volume }
+      instance_uuid: { get_param: instance }
+

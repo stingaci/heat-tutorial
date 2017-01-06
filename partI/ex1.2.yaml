@@ -1,0 +1,53 @@
+heat_template_version: 2015-10-15
+
+
+description: >
+  This template introduces parameters and intrinsic functions and how one can 
+  use this to formulate more flexible templates. It will showcase most of the 
+  parameter properties and how to supply them from command line as well as the 
+  get_param intrinsic function.
+
+parameters:
+
+  image:
+    label: Server Image
+    description: This parameter should be an image defined in glance.
+    type: string
+    default: Centos 7
+
+  flavor:
+    label: Instance Flavor
+    description: Paramter that defines what type of flavor this instance will launch as
+    type: string
+    default: m1.small
+
+  ssh_key:
+    label: SSH Key to be injected into instance
+    description: Parameter that defines which keypair should be injected into the instance
+    type: string
+    default: heat_key
+
+  network_name: 
+    label: Network name 
+    description: Which network should the instance be connected to
+    type: string
+    default: setup_net
+
+  security_group:
+    label: Security Group
+    description: Security Group that will gouvern the ingress/egress rules for this instance
+    type: string
+
+resources:
+
+  instance:
+    type: OS::Nova::Server
+    properties:
+      name: ex1.2
+      key_name: { get_param: ssh_key }
+      image: { get_param: image } 
+      flavor: { get_param: flavor } 
+      networks: 
+        - network: { get_param: network_name }
+      security_groups:
+        - { get_param: security_group }

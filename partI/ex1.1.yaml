@@ -1,0 +1,22 @@
+heat_template_version: 2015-10-15
+
+
+description: > 
+  This template introduces the basic syntax for a HOT template in 
+  its most simple form. This is a single instance deployment with hard coded 
+  values for every attribute and does not use any intrinsic functions.
+
+
+resources:
+
+  instance:
+    type: OS::Nova::Server
+    properties:
+      name: ex1.1
+      key_name: heat_key
+      image: Centos 7 
+      flavor: m1.small
+      networks:
+        - network: setup_net
+      security_groups: 
+        - setup_sg 

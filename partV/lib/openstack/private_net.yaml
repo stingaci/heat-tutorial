@@ -1,0 +1,68 @@
+heat_template_version: 2015-10-15
+
+parameters:
+
+  public_network_id:
+    label: Network ID for public network
+    type: string
+    constraints:
+      - custom_constraint: neutron.network
+
+  cidr:
+    label: CIDR for subnet
+    type: string
+    default: 10.0.56.0/24
+
+  prefix:
+    label: Prefix for each resource
+    type: string
+    constraints:
+      - allowed_pattern: '[a-zA-Z][a-zA-Z0-9_]*'
+        description: Resource name must start with a letter and only contain alphanumeric characters
+
+resources:
+
+  router:
+    type: OS::Neutron::Router
+    properties:
+      name:
+        str_replace:
+          template: $prefix_router
+          params:
+            "$prefix": { get_param: prefix }
+      external_gateway_info:
+        network: { get_param: public_network_id }
+
+  net:
+    type: OS::Neutron::Net
+    properties:
+      name:
+        str_replace:
+          template: $prefix_net
+          params:
+            "$prefix": { get_param: prefix }
+
+  subnet:
+    type: OS::Neutron::Subnet
+    properties:
+      name:
+        str_replace:
+          template: $prefix_subnet
+          params:
+            "$prefix": { get_param: prefix }
+      cidr: { get_param: cidr }
+      enable_dhcp: true
+      network_id: { get_resource: net }
+      dns_nameservers:
+        - 8.8.8.8
+
+  router_interface_add:
+    type: OS::Neutron::RouterInterface
+    properties:
+      router_id: { get_resource: router }
+      subnet_id: { get_resource: subnet }
+
+outputs:
+  name:
+    description: The private network
+    value: { get_attr: [net, name] }

@@ -1,0 +1,104 @@
+heat_template_version: 2015-10-15
+
+description: >
+  This template uses the previously introduced str_replace intrinsic function to provide the script 
+  definied in user_data with inputs that the user will provide as parameters when the stack is created.
+
+parameters:
+
+  image:
+    label: Server Image
+    description: >
+      This parameter should be an image defined in glance.
+    type: string
+    default: Centos 7
+    constraints:
+      - custom_constraint: glance.image
+
+  flavor:
+    label: Instance Flavor
+    description: Paramter that defines what type of flavor this instance will launch as
+    type: string
+    default: m1.small
+    constraints:
+      - custom_constraint: nova.flavor
+
+  ssh_key:
+    label: SSH Key to be injected into instance
+    description: Parameter that defines which keypair should be injected into the instance
+    type: string
+    default: heat_key
+    constraints:
+      - custom_constraint: nova.keypair
+
+  security_group_icmp:
+    label: Security Group Name (ICMP)
+    type: string 
+    default: setup_sg_icmp
+
+  security_group_web:
+    label: Security Group Name (WEB)
+    type: string 
+    default: setup_sg_web
+
+  network_name:
+    label: Network Name
+    type: string
+    default: setup_net
+    constraints:
+      - custom_constraint: neutron.network
+
+  public_network_id:
+    label: Public Network ID
+    type: string
+
+  name: 
+    label: Webserver name
+    type: string
+
+  message:
+    label: Initial content for index.html
+    type: string
+
+resources:
+
+  http_config:
+    type: ../softwareconfigs/httpd.yaml
+    properties:
+      msg: { get_param: message }
+      instance: { get_resource: instance }
+
+  boot_config:
+    type: Heat::InstallConfigAgent
+
+  instance:
+    type: OS::Nova::Server
+    properties:
+      name: { get_param: name }
+      image: { get_param: image }
+      security_groups: 
+        - { get_param: security_group_icmp }
+        - { get_param: security_group_web }
+      key_name: { get_param: ssh_key }
+      flavor: { get_param: flavor }
+      networks: 
+        - network: { get_param: network_name }
+      user_data_format: SOFTWARE_CONFIG 
+      software_config_transport: POLL_SERVER_HEAT
+      user_data: { get_attr: [boot_config, config] } 
+
+  floating_ip:
+    type: Tutorial::FloatingIP
+    properties:
+      public_network_id: { get_param: public_network_id }
+      port: { get_attr: [instance, addresses, { get_param: network_name} ,0 , port] } 
+
+outputs:
+  floating_ip: 
+    value: { get_attr: [ floating_ip, floating_ip_address] }
+  ipaddr:
+    value: { get_attr: [ instance, first_address ] }
+  port:
+    value: { get_attr: [instance, addresses, { get_param: network_name} ,0 , port] }
+  uuid:
+    value: { get_resource: instance }

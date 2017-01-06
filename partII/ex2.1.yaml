@@ -1,0 +1,168 @@
+heat_template_version: 2015-10-15
+
+description: >
+  This exercise builds on top of the partI templates by adding the necessary 
+  components to orchestrate the deployment of a full network stack alongside 
+  the instance and volume deployment.  
+
+parameters:
+
+  image:
+    label: Server Image
+    description: This parameter should be an image defined in glance.
+    type: string
+    default: Centos 7
+    constraints:
+      - custom_constraint: glance.image
+
+  flavor:
+    label: Instance Flavor
+    description: Paramter that defines what type of flavor this instance will launch as
+    type: string
+    default: m1.small
+    constraints:
+      - custom_constraint: nova.flavor
+
+  ssh_key:
+    label: SSH Key to be injected into instance
+    description: Parameter that defines which keypair should be injected into the instance
+    type: string
+    default: heat_key
+    constraints:
+      - custom_constraint: nova.keypair
+
+  public_network_id:
+    label: Network ID for public network  
+    type: string
+    constraints:
+      - custom_constraint: neutron.network
+
+  volume_size:
+    label: Cinder Volume Size
+    description: Volume size for the cinder volume that will be mounted to nova instance
+    type: number
+    default: 1
+    constraints:
+      - range: { min: 1, max: 1024 }
+        description: must be between 1 and 1024 Gb.
+   
+  network_name:
+    label: Network Name
+    type: string
+    default: ex2_net
+    constraints:
+      - allowed_pattern: '[a-zA-Z][a-zA-Z0-9_]*'
+  
+  subnet_name:
+    label: Subnet Name
+    type: string
+    default: ex2_subnet
+    constraints:
+      - allowed_pattern: '[a-zA-Z][a-zA-Z0-9_]*'
+
+  router_name:
+    label: Router Name
+    type: string
+    default: ex2_router
+    constraints:
+      - allowed_pattern: '[a-zA-Z][a-zA-Z0-9_]*'
+
+  security_group_name:
+    label: Security Group Name
+    type: string
+    default: ex2_sg
+    constraints:
+      - allowed_pattern: '[a-zA-Z][a-zA-Z0-9_]*'
+
+  instance_name:
+    label: Instance Name
+    type: string
+    constraints:
+      - allowed_pattern: '[a-zA-Z][a-zA-Z0-9_]*'
+
+resources:
+
+  router:
+    type: OS::Neutron::Router
+    properties:
+      name: { get_param: router_name }
+      external_gateway_info:
+        network: { get_param: public_network_id }
+
+  net:
+    type: OS::Neutron::Net
+    properties:
+      name: { get_param: network_name }
+
+  subnet:
+    type: OS::Neutron::Subnet
+    properties:
+      name: { get_param: subnet_name }
+      cidr: 10.0.56.0/24
+      enable_dhcp: true
+      dns_nameservers:
+        - 8.8.8.8
+      network_id: { get_resource: net }
+
+  router_interface_add:
+    type: OS::Neutron::RouterInterface
+    properties: 
+      router_id: { get_resource: router }
+      subnet_id: { get_resource: subnet }
+
+  security_group:
+    type: OS::Neutron::SecurityGroup
+    properties:
+      description: Add security group rules for server
+      name: { get_param: security_group_name } 
+      rules:
+        - remote_ip_prefix: 0.0.0.0/0
+          protocol: tcp
+          port_range_min: 22
+          port_range_max: 22
+        - protocol: icmp
+
+  instance_port:
+    type: OS::Neutron::Port
+    properties: 
+      network_id: { get_resource: net }
+      security_groups: 
+        - { get_resource: security_group } 
+
+  instance:
+    type: OS::Nova::Server
+    properties:
+      name: ex2.1 
+      image: { get_param: image }
+      flavor: { get_param: flavor }
+      key_name: { get_param: ssh_key }
+      networks: 
+        - port: { get_resource: instance_port }
+
+  floating_ip:
+    type: OS::Neutron::FloatingIP
+    properties:
+      floating_network: { get_param: public_network_id }
+
+  floating_ip_assoc:
+    type: OS::Neutron::FloatingIPAssociation
+    properties:
+      floatingip_id: { get_resource: floating_ip  }
+      port_id: { get_resource: instance_port }
+
+  cinder_volume:
+    type: OS::Cinder::Volume
+    properties:
+      size: { get_param: volume_size }
+      availability_zone: nova
+
+  volume_attachment:
+    type: OS::Cinder::VolumeAttachment
+    properties:
+      volume_id: { get_resource: cinder_volume }
+      instance_uuid: { get_resource: instance }
+
+outputs: 
+  instance_ip:
+    description: IP address of the deployed compute instance
+    value: { get_attr: [floating_ip, floating_ip_address] }

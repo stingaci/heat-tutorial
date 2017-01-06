@@ -1,0 +1,106 @@
+heat_template_version: 2015-10-15
+
+description: >
+  This template aims to illustrate the main problem with creating dependencies 
+  between resources while using cloud-init
+
+parameters:
+
+  image:
+    label: Server Image
+    description: >
+      This parameter should be an image defined in glance.
+    type: string
+    default: Centos 7
+    constraints:
+      - custom_constraint: glance.image
+
+  flavor:
+    label: Instance Flavor
+    description: Paramter that defines what type of flavor this instance will launch as
+    type: string
+    default: m1.small
+    constraints:
+      - custom_constraint: nova.flavor
+
+  ssh_key:
+    label: SSH Key to be injected into instance
+    description: Parameter that defines which keypair should be injected into the instance
+    type: string
+    default: heat_key
+    constraints:
+      - custom_constraint: nova.keypair
+
+  security_group_icmp:
+    label: Security Group Name (ICMP)
+    type: string 
+    default: setup_sg_icmp
+
+  security_group_web:
+    label: Security Group Name (WEB)
+    type: string 
+    default: setup_sg_web
+
+  network_name:
+    label: Network Name
+    type: string
+    default: setup_net
+    constraints:
+      - custom_constraint: neutron.network
+
+  public_network_id: 
+    label: Public Network ID
+    type: string
+
+resources:
+
+  http_floating_ip:
+    type: Tutorial::FloatingIP
+    properties:
+      public_network_id: { get_param: public_network_id } 
+      port: { get_attr: [http, port ] } 
+
+  http:
+    type: Tutorial::Application::HTTP::NoWait 
+    properties:
+      name: ex4.6_http
+      image: { get_param: image }
+      security_group_icmp: { get_param: security_group_icmp }
+      security_group_web: { get_param: security_group_web }
+      ssh_key: { get_param: ssh_key }
+      flavor: { get_param: flavor }
+      network_name: { get_param: network_name }
+      msg: "Webservers are awesome!"
+
+  instance_floating_ip:
+    type: Tutorial::FloatingIP
+    properties:
+      public_network_id: { get_param: public_network_id } 
+      port: { get_attr: [instance, addresses, { get_param: network_name}, 0,port ] } 
+
+  instance:
+    type: OS::Nova::Server
+    properties:
+      name: ex4.6_instance
+      image: { get_param: image }
+      security_groups:
+        - { get_param: security_group_icmp }
+        - { get_param: security_group_web }
+      key_name: { get_param: ssh_key }
+      flavor: { get_param: flavor }
+      networks:
+        - network: { get_param: network_name }
+      user_data_format: RAW
+      user_data:
+        str_replace:
+          params: 
+            $ip: { get_attr: [ http_floating_ip, floating_ip_address ] }
+          template: |
+            #!/bin/bash
+            echo "Data gathered from http: `curl $ip`" > /tmp/hello
+
+outputs:
+  http_ipaddr:
+    value: { get_attr: [ http_floating_ip, floating_ip_address ] }
+  instance_ipaddr:
+    value: { get_attr: [ instance_floating_ip, floating_ip_address ] }

@@ -1,0 +1,115 @@
+heat_template_version: 2015-10-15
+
+description: >
+  This template introduces the cloud-config script type and uses it to add a 
+  user, and install, configure and start a webserver
+
+parameters:
+
+  image:
+    label: Server Image
+    description: >
+      This parameter should be an image defined in glance.
+    type: string
+    default: Centos 7
+    constraints:
+      - custom_constraint: glance.image
+
+  flavor:
+    label: Instance Flavor
+    description: Paramter that defines what type of flavor this instance will launch as
+    type: string
+    default: m1.small
+    constraints:
+      - custom_constraint: nova.flavor
+
+  ssh_key:
+    label: SSH Key to be injected into instance
+    description: Parameter that defines which keypair should be injected into the instance
+    type: string
+    default: heat_key
+    constraints:
+      - custom_constraint: nova.keypair
+
+  security_group_icmp:
+    label: Security Group Name (ICMP)
+    type: string 
+    default: setup_sg_icmp
+
+  security_group_web:
+    label: Security Group Name (WEB)
+    type: string 
+    default: setup_sg_web
+
+  network_name:
+    label: Network Name
+    type: string
+    default: setup_net
+    constraints:
+      - custom_constraint: neutron.network
+
+  public_network_id: 
+    label: Public Network ID
+    type: string
+
+  output_string:
+    label: Output String 
+    type: string 
+    default: Hello world!
+  
+  output_file:
+    label: Output File
+    type: string
+    default: /var/www/html/index.html
+
+  user:
+    label: User to be created on the instance
+    type: string 
+
+resources:
+
+  floating_ip:
+    type: Tutorial::FloatingIP
+    properties:
+      public_network_id: { get_param: public_network_id } 
+      port: { get_attr: [instance, addresses, { get_param: network_name} ,0 , port] }
+
+  instance:
+    type: OS::Nova::Server
+    properties:
+      name: ex4.3
+      image: { get_param: image }
+      security_groups: 
+        - { get_param: security_group_icmp }
+        - { get_param: security_group_web }
+      key_name: { get_param: ssh_key }
+      flavor: { get_param: flavor }
+      networks: 
+        - network: { get_param: network_name }
+      user_data_format: RAW
+      user_data:
+        str_replace:
+          template: |
+            #cloud-config
+            write_files:
+              - path: $output_file
+                content: $output_string
+            users:
+              - default
+              - name: $user
+                sudo: ALL=(ALL) NOPASSWD:ALL
+                ssh-authorized-keys:
+                 - $ssh_key
+            packages:
+              - httpd 
+            runcmd:
+              - service httpd start
+          params:
+            $output_string: { get_param: output_string }
+            $output_file: { get_param: output_file } 
+            $user: { get_param: user }
+            $ssh_key: { get_file: ../key-pairs/heat_key.pub }
+
+outputs:
+  ipaddr:
+    value: { get_attr: [ floating_ip, floating_ip_address ] }

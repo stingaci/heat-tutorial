@@ -1,0 +1,77 @@
+heat_template_version: 2015-10-15
+
+description: 
+  This template makes use of the concept of nested templates to instead of 
+  installing and configuring a webserver within the template, make use of a 
+  prebuilt webserver application template.
+
+parameters:
+
+  image:
+    label: Server Image
+    description: >
+      This parameter should be an image defined in glance.
+    type: string
+    default: Centos 7
+    constraints:
+      - custom_constraint: glance.image
+
+  flavor:
+    label: Instance Flavor
+    description: Paramter that defines what type of flavor this instance will launch as
+    type: string
+    default: m1.small
+    constraints:
+      - custom_constraint: nova.flavor
+
+  ssh_key:
+    label: SSH Key to be injected into instance
+    description: Parameter that defines which keypair should be injected into the instance
+    type: string
+    default: heat_key
+    constraints:
+      - custom_constraint: nova.keypair
+
+  security_group_icmp:
+    label: Security Group Name (ICMP)
+    type: string 
+    default: setup_sg_icmp
+
+  security_group_web:
+    label: Security Group Name (WEB)
+    type: string 
+    default: setup_sg_web
+
+  network_name:
+    label: Network Name
+    type: string
+    default: setup_net
+    constraints:
+      - custom_constraint: neutron.network
+
+  public_network_id: 
+    label: Public Network ID
+    type: string
+
+resources:
+
+  floating_ip:
+    type: Tutorial::FloatingIP
+    properties:
+      public_network_id: { get_param: public_network_id } 
+      port: { get_attr: [instance, port ] } 
+
+  instance:
+    type: Tutorial::Application::HTTP::NoWait 
+    properties:
+      name: ex4.5
+      image: { get_param: image }
+      security_group_icmp: { get_param: security_group_icmp }
+      security_group_web: { get_param: security_group_web }
+      ssh_key: { get_param: ssh_key }
+      flavor: { get_param: flavor }
+      network_name: { get_param: network_name }
+
+outputs:
+  ipaddr:
+    value: { get_attr: [ floating_ip, floating_ip_address ] }

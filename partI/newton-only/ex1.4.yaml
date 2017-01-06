@@ -1,0 +1,102 @@
+heat_template_version: 2015-10-15
+
+parameters:
+
+  image:
+    label: Server Image
+    description: > 
+      This parameter should be an image defined in glance.
+    type: string
+    default: Centos 7
+
+  flavor:
+    label: Instance Flavor
+    description: Paramter that defines what type of flavor this instance will launch as
+    type: string
+    default: m1.small
+    constraints:
+      - custom_constraint: nova.flavor
+
+  ssh_key:
+    label: SSH Key to be injected into instance
+    description: Parameter that defines which keypair should be injected into the instance
+    type: string
+    constraints:
+      - custom_constraint: nova.keypair
+
+  security_group:
+    label: Security Group
+    description: Security Group that will gouvern the ingress/egress rules for this instance
+    type: string
+    default: setup_sg
+
+  network_name:
+    label: Network name
+    description: Which network should the instance be connected to
+    type: string
+    default: setup_net
+    constraints:
+      - custom_constraint: neutron.network
+
+  volume_size:
+    label: Cinder Volume Size
+    description: Volume size for the cinder volume that will be mounted to nova instance
+    type: number
+    default: 1
+    constraints: 
+      - range: { min: 1, max: 1024 }
+        description: must be between 1 and 1024 Gb.
+        
+  env_type:
+    label: Flag for production deployment
+    description: If this flag is set to true this deployment will launch and attach a Cinder Volume to the Nova instance
+    default: false
+    type: string
+    conditions:
+      - allowed_values: 
+        - prod 
+        - dev
+
+conditions:
+  is_prod: 
+    equals:
+      - { get_param: env_type }
+      - prod
+
+resources:
+
+  instance:
+    type: OS::Nova::Server
+    properties:
+      key_name: { get_param: ssh_key }
+      image: { get_param: image } 
+      flavor: { get_param: flavor } 
+      avilability_zone: nova
+      networks:
+        - network: { get_param: network_name }
+      security_groups:
+        - { get_param: security_group }
+
+  cinder_volume:
+    type: OS::Cinder::Volume
+    condition: is_prod
+    properties:
+      size: { get_param: volume_size }
+      availability_zone: nova
+
+  volume_attachment:
+    type: OS::Cinder::VolumeAttachment
+    condition: is_prod
+    properties:
+      volume_id: { get_resource: cinder_volume }
+      instance_uuid: { get_resource: full_stack }
+
+outputs:
+
+  instance_ip:
+    description: IP address of the deployed compute instance
+    value: { get_attr: [my_instance, first_address] }
+
+  instance_attachments:
+    description: Attachements for the Nova instance
+    value: { get_attr: [cinder_volume, attachments ] }

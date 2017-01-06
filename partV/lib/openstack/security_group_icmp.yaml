@@ -1,0 +1,25 @@
+heat_template_version: 2015-10-15
+
+parameters:
+
+  name: 
+    label: Security group name
+    type: string 
+    default: app
+
+resources:
+
+  security_group:
+    type: OS::Neutron::SecurityGroup
+    properties:
+      name: { get_param: name }
+      rules:
+        - protocol: icmp
+
+outputs:
+  uuid:
+    description: UUID for security group
+    value: { get_resource: security_group }
+  name:
+    description: Security Group Name
+    value: { get_param: name }

@@ -1,0 +1,14 @@
+heat_template_version: 2015-10-15
+
+resources:
+
+  security_group:
+    type: OS::Neutron::SecurityGroup
+    properties:
+      rules:
+        - protocol: icmp
+
+outputs:
+  uuid:
+    description: UUID for security group
+    value: { get_resource: security_group }

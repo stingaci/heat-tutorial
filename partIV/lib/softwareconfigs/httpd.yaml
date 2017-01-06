@@ -1,0 +1,42 @@
+heat_template_version: 2015-10-15
+
+parameters:
+  msg:
+    type: string
+
+resources:
+
+  http_install:
+    type: OS::Heat::SoftwareConfig
+    properties:
+      group: ungrouped
+      config: { get_file: scripts/httpd/install.sh } 
+
+  http_configure:
+    type: OS::Heat::SoftwareConfig
+    properties:
+      group: ungrouped
+      config: 
+        str_replace: 
+          params: 
+            $msg: { get_param: msg }
+          template: { get_file: scripts/httpd/configure.sh }
+
+  http_start:
+    type: OS::Heat::SoftwareConfig
+    properties:
+      group: ungrouped
+      config: { get_file: scripts/httpd/start.sh }
+
+  http:
+    type: OS::Heat::MultipartMime
+    properties:
+      parts:
+        - config: { get_resource: http_install }
+        - config:  { get_resource: http_configure } 
+        - config: { get_resource: http_start } 
+
+
+outputs:
+  config:
+    value: { get_resource: http } 

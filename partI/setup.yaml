@@ -1,0 +1,112 @@
+heat_template_version: 2015-10-15
+
+parameters:
+
+  image:
+    label: Server Image
+    description: >
+      This parameter should be an image defined in glance.
+    type: string
+    default: Centos 7
+    constraints:
+      - custom_constraint: glance.image
+
+  flavor:
+    label: Instance Flavor
+    description: Paramter that defines what type of flavor this instance will launch as
+    type: string
+    default: m1.small
+    constraints:
+      - custom_constraint: nova.flavor
+
+  ssh_key:
+    label: SSH Key to be injected into instance
+    description: Parameter that defines which keypair should be injected into the instance
+    type: string
+    default: heat_key
+    constraints:
+      - custom_constraint: nova.keypair
+
+  public_network_id:
+    label: Network ID for public network  
+    type: string
+    constraints:
+      - custom_constraint: neutron.network
+
+resources:
+  setup_net:
+    type: OS::Neutron::Net
+    properties:
+      name: setup_net
+
+  setup_subnet:
+    type: OS::Neutron::Subnet
+    properties:
+      name: setup_subnet
+      cidr: 10.0.56.0/24
+      enable_dhcp: true
+      network_id: { get_resource: setup_net }
+      dns_nameservers:
+          - 8.8.8.8
+
+  setup_router:
+    type: OS::Neutron::Router
+    properties:
+      name: setup_router 
+
+  router_gateway_set: 
+    type: OS::Neutron::RouterGateway
+    properties:
+      network_id: { get_param: public_network_id }
+      router_id: { get_resource: setup_router}
+
+  router_interface_add:
+    type: OS::Neutron::RouterInterface
+    properties: 
+      router_id: { get_resource: setup_router }
+      subnet_id: { get_resource: setup_subnet }
+
+  instance_port:
+    type: OS::Neutron::Port
+    properties: 
+      network_id: { get_resource: setup_net }
+      security_groups: 
+        - { get_resource: security_group } 
+
+  instance:
+    type: OS::Nova::Server
+    properties:
+      name: jumphost
+      image: { get_param: image }
+      flavor: { get_param: flavor }
+      key_name: { get_param: ssh_key }
+      networks: 
+        - port: { get_resource: instance_port }
+
+  floating_ip:
+    type: OS::Neutron::FloatingIP
+    properties:
+      floating_network: { get_param: public_network_id }
+
+  floating_ip_assoc:
+    type: OS::Neutron::FloatingIPAssociation
+    properties:
+      floatingip_id: { get_resource: floating_ip  }
+      port_id: { get_resource: instance_port }
+
+  security_group:
+    type: OS::Neutron::SecurityGroup
+    properties:
+      description: Add security group rules for server
+      name: setup_sg
+      rules:
+        - remote_ip_prefix: 0.0.0.0/0
+          protocol: tcp
+          port_range_min: 22
+          port_range_max: 22
+        - protocol: icmp
+
+outputs:
+  jumphost_ip:
+    description: Floating IP 
+    value: { get_attr: [floating_ip, floating_ip_address] }

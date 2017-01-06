@@ -1,0 +1,36 @@
+heat_template_version: 2015-10-15
+
+parameters:
+
+  ports:
+    label: Open Ports on instance
+    type: comma_delimited_list
+    default: "80,443"
+  
+  protocols:
+    label: Protocols for open ports
+    type: comma_delimited_list
+    default: "tcp"
+    constraints:
+      - allowed_values: ['tcp','udp']
+
+resources:
+
+  security_group:
+    type: OS::Neutron::SecurityGroup
+    properties:
+      rules:
+        repeat:
+          for_each:
+            $protocol: { get_param: protocols }
+            $port: { get_param: ports }
+          template:
+            protocol: $protocol
+            port_range_min: $port
+            port_range_max: $port
+            remote_ip_prefix: 0.0.0.0/0
+
+outputs:
+  uuid:
+    description: UUID for security group
+    value: { get_resource: security_group}

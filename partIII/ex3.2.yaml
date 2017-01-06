@@ -1,0 +1,88 @@
+heat_template_version: 2015-10-15
+
+parameters:
+
+  image:
+    label: Server Image
+    description: >
+      This parameter should be an image defined in glance.
+    type: string
+    default: Centos 7
+    constraints:
+      - custom_constraint: glance.image
+
+  flavor:
+    label: Instance Flavor
+    description: Paramter that defines what type of flavor this instance will launch as
+    type: string
+    default: m1.small
+    constraints:
+      - custom_constraint: nova.flavor
+
+  ssh_key:
+    label: SSH Key to be injected into instance
+    description: Parameter that defines which keypair should be injected into the instance
+    type: string
+    default: heat_key
+    constraints:
+      - custom_constraint: nova.keypair
+
+  public_network_id:
+    label: Network ID for public network  
+    type: string
+    constraints:
+      - custom_constraint: neutron.network
+
+  application_name:
+    label: Application Name
+    type: string
+    constraints:
+      - allowed_pattern: '[a-zA-Z][a-zA-Z0-9_]*'
+        description: Application name must start with a letter and only contain alphanumeric characters
+
+resources:
+
+  network_stack: 
+    type: Tutorial::PrivateNetwork
+    properties: 
+      public_network_id: { get_param: public_network_id }
+      prefix: { get_param: application_name }
+
+  floating_ip:
+    type: Tutorial::FloatingIP
+    properties: 
+      public_network_id: { get_param: public_network_id }
+      port: { get_attr: [instance, addresses, { get_attr: [network_stack, name] },0 , port] } 
+
+  security_group_icmp:
+    type: Tutorial::SecurityGroupICMP
+
+  security_group_web:
+    type: Tutorial::SecurityGroup
+    properties:
+      ports: ['22','80','443']
+      protocols: ['tcp', 'udp']
+
+  volume:
+    type: Tutorial::CinderVolume
+    properties:
+      volume_size: 1
+      instance: { get_resource: instance } 
+
+  instance:
+    type: OS::Nova::Server
+    properties:
+      name: { get_param: application_name }
+      image: { get_param: image }
+      flavor: { get_param: flavor }
+      key_name: { get_param: ssh_key }
+      security_groups:
+        - { get_attr: [security_group_icmp, uuid] }
+        - { get_attr: [security_group_web, uuid] }
+      networks: 
+        - network: { get_attr: [network_stack, name] }
+        
+outputs: 
+  instance_ip:
+    description: IP address of the deployed compute instance
+    value: { get_attr: [floating_ip, floating_ip_address] }
