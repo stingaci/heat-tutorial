@@ -8,26 +8,26 @@ Opnestack infrastrucuture resources while the latter part of the tutorial
 focuses on orchestrating software configurations via the use of cloud-init and 
 Heat software deployments. 
 
-Part I - Heat Basics 
+`Part I - Heat Basics <https://github.com/stingaci/heat-tutorial/tree/master/partI>`_
   Basic single-vm HOT templates (resources, parameters, outputs, intrinsic 
   functions)
 
-Part II - Full Stack Deployment 
+`Part II - Full Stack Deployment <https://github.com/stingaci/heat-tutorial/tree/master/partII>`_
   Full-stack deployment for single-vm (vm, networks, floating-ip, 
   security-groups)
 
-Part III - Multi-instance deployments
+`Part III - Multi-instance deployments <https://github.com/stingaci/heat-tutorial/tree/master/partIII>`_
   Nested templates, heat environments
 
-Part IV -Cloud-Init & Heat 
+`Part IV -Cloud-Init & Heat <https://github.com/stingaci/heat-tutorial/tree/master/partIV>`_
   User data scripts, cloud-config, application deployment/configuration 
   examples, signaling
  
-Part V - Software Deployments 
+`Part V - Software Deployments <https://github.com/stingaci/heat-tutorial/tree/master/partV>`_
   Software configuration alternative to cloud-init, VM lifecycle managment, 
   non-replacement software configuration updates 
 
-Part VI - Vertical and Horizontal Scaling
+`Part VI - Vertical and Horizontal Scaling <https://github.com/stingaci/heat-tutorial/tree/master/partVI>`_
   Scaling a stack vertically (increase instance resources) or horizontally 
   (add more instances; loadbalancers)
 
@@ -98,6 +98,6 @@ Cloud-init
 ---------
 
 - `Cloud-init Docs <http://cloudinit.readthedocs.io/en/latest/>`_
-- `Cloud-config Examples http://cloudinit.readthedocs.io/en/latest/topics/examples.html>`_
+- `Cloud-config Examples <http://cloudinit.readthedocs.io/en/latest/topics/examples.html>`_
 - `Using cloud-init With Heat <https://sdake.io/2013/03/03/how-we-use-cloudinit-in-openstack-heat/>`_
 
