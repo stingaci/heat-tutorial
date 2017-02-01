@@ -2,9 +2,9 @@ Openstack Orchestration Tutorial
 ================================
 
 This tutorial aims to illustrate the concepts surrounding orchestration in 
-Openstack both infrastructure orchestration and software configuration 
-orchestration. The first three part of the tutorial focus on orchestrating 
-Opnestack infrastrucuture resources while the latter part of the tutorial 
+Openstack; both infrastructure orchestration and software configuration 
+orchestration. The first three parts of the tutorial focus on orchestrating 
+Openstack infrastrucuture resources while the latter part of the tutorial 
 focuses on orchestrating software configurations via the use of cloud-init and 
 Heat software deployments. 
 
@@ -34,7 +34,7 @@ Heat software deployments.
 Format
 ======
 
-Each part in this tutorial has it's own directory with a README.rst which the 
+Each part in this tutorial has its own directory with a README.rst which the 
 reader should follow while performing each exercise. Each README is quite 
 extensive and contains useful links as well as documentation on each exercise. 
 
@@ -46,7 +46,7 @@ are applicable even up to the Newton release. I am planning on updating this
 tutorial to a newever version in the near feature. This tutorial also assumed 
 you are working with a RHEL based image (a Centos 7 image is used all 
 throughout the exercises). This second point only becomes more important in 
-the second half of the tutorial when software configurations are thought. 
+the second half of the tutorial when software configurations are covered. 
 
 Lastly, this tutorial assumes that you created a keypair in the key-pairs 
 folder of the tutorial named *heat_key*. The reader can create this key as 
