@@ -206,7 +206,7 @@ should output at the end of the deployment. The `get_attr
 <http://docs.openstack.org/developer/heat/template_guide/hot_spec.html#get-attr>`_ 
 intrinsic function is used to extract resource attributes (as documented in 
 each resource specification) for populating the output values of the stack. The 
-outputs of a stack can be gathered after the template reaches a  
+outputs of a stack can be gathered after the stack reaches a  
 *CREATE_COMPLETE* state using the following command:
 
 .. code:: bash
@@ -230,11 +230,9 @@ This template can be deployed using the following command:
 Although the *neutron.security_group* is listed as a custom constraint in the 
 documentation, it is only part of the Mitaka template version. The 
 documentation seems to lack what template version each custom constraint 
-belongs to. Also for direct Openstack resource references (ie. network, 
-flavor), the custom constraint seems to be built in directly without the need 
-to specify them like we did in this exercise. The custom constraints can be 
-very useful however when referencing other instances (by UUID) for example. 
-That being said, it's still best practice to specify them both for readability 
+belongs to. Custom constraints can be very useful when referencing other 
+instances or Openstack resources (by UUID) for example. That being said, it's 
+still best practice to specify them wherever it is applicable for readability 
 and extra validation purposes.  
 
 Clean up

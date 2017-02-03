@@ -13,7 +13,7 @@ Training Templates
 ex2.1.yaml
 ----------
   
-This exercise builds on top of the partI templates by adding the necessary 
+This exercise builds on top of the part I templates by adding the necessary 
 components to orchestrate the deployment of a full network stack alongside the 
 instance and volume deployment. 
 
@@ -135,7 +135,7 @@ Lastly the instance definition has the port
 attribute of the networks attribute linked to the port we just created via the 
 *get_resource* function. The instance port could've been intrinsically defined 
 by directly specifying the network and security group directly in the instance 
-definition as was done in partI, however the port is easier referenced and 
+definition as was done in part I, however the port is easier referenced and 
 logically separates the networking component of the instance definition. 
 
 In order to access this instance, a floating IP must be associated with 
@@ -200,7 +200,7 @@ illustrate further flexibility tools of HOT templates
 
 As discussed in the last point of the previous exercise, if deploying multiple 
 stacks with equivalent resources names there will not be a naming conflict (as 
-openstack uses UUID as the primary key), and it may become very conffusing 
+openstack uses UUID as the primary key), and it may become very confusing 
 later on if you need to make any changes or reference the resource by name in 
 another template. However, having to specify the name for each resource (as an 
 input parameter) may become tedious as well. Using the *application_name* input 

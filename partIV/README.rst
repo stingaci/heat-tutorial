@@ -26,7 +26,7 @@ Setup
 =====
 
 The reader can either choose to deploy their own prerequisite resources or they 
-can use the setup.yaml stack definition to automatically do so.  The setup file 
+can use the setup.yaml stack definition to automatically do so. The setup file 
 can be deployed as follows: 
 
 .. code:: bash
@@ -52,7 +52,7 @@ values for the user_data_format later). The script inside the user_data
 property is a simple script that prints "Hello world" to the /tmp/help file 
 (the '|' is a YAML `literal sytle block chomping indicator 
 <http://www.yaml.org/spec/1.2/spec.html#id2795688>`_ used to indicate the 
-following text is multiline input which preserves new lines). 
+following text is multiline input which preserves new line characters). 
 
 After launching this stack, the reader can check if the user_data script has 
 successfully ran by running the following command:
@@ -124,8 +124,8 @@ The first two templates utilized a bash script supplied in the user_data
 property. Cloud-init uses the shebang at the beginning of the script to 
 identify which interpreter should be used (ie. bash, python). A special type of 
 script named cloud-config is also supported by cloud-init. This script uses the 
-YAML format to describe actions to be performed upon instance startup. You can find 
-more cloud-config examples on the `cloud_init man pages 
+YAML format to describe actions to be performed upon instance startup. You can 
+find more cloud-config examples on the `cloud_init man pages 
 <http://cloudinit.readthedocs.io/en/latest/topics/examples.html>`_. The script 
 looks as follows:
 
@@ -204,6 +204,18 @@ are also advantages due to the fact that the process of installing a package
 supporting cloud-init and thus will be less error prone than custom built 
 scripts. 
 
+There is also an argument to be made against *cloud-config* scripts in 
+relevance to the package manager note I made in the previous paragraph as 
+some packages will have different names across distros (httpd for RHEL based
+OSs, and apache2 for Debian based OSs). 
+
+Lastly, another important point to be pertains to order in which the sections 
+for the *cloud-config* script are processed. Cloud-init defines this order 
+based on what they deemed should be the most appropriate as to avoid race 
+conditions between commands. To be honest, I've had a very hard time finding 
+the exact order anywhere. `This <http://stackoverflow.com/questions/34095839/cloud-init-what-is-the-execution-order-of-cloud-config-directives>`_
+is the best I could find.
+
 
 ex3.4.yaml
 ----------
@@ -246,10 +258,11 @@ The *ungrouped* value is the default value and should always be used when using
 cloud-init as the software orchestration engine (more on other types of 
 groups later). The config section, as the name indicates, holds the actual 
 configuration for this resource definition. The reader will notice this is a 
-cloud-config type of script containing the users section from previous exercises. 
+cloud-config type of script containing the users section from previous 
+exercises. 
 
 Another OS::Heat::SoftwareConfig resource, namely *http_config*, has been 
-defined in this template which is used to install, configure and start a 
+defined in this template which is used to install, configure, and start a 
 webserver (similar to previous exercises). The more important point to notice 
 here is that the *user_config* software config has a template script of type 
 cloud-config, while *http_config* has a template script of type #/bin/bash. 
@@ -451,7 +464,7 @@ property. A timeout property specifies the time it will wait for those signals.
 Basically any resource (such as an instance) that is associated with a 
 WaitConditionHandle will remain in the *CREATE_IN_PROGRESS* state until the 
 WaitCondition resource that is associated with that particular 
-WaitConditionHandle (in this case *wait_handle*) will recevie a signal 
+WaitConditionHandle (in this case *wait_handle*) will receive a signal 
 indicating a SUCCESS status. 
 
 The *http_singnal* resource is a SoftwareConfig resource that does exactly 

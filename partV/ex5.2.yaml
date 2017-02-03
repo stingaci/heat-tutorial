@@ -1,9 +1,8 @@
 heat_template_version: 2015-10-15
 
 description: >
-  This exercise aims to illustrate how a webserver application template can be 
-  built using Software Deployments
-
+  This exercise showcases that SoftwareDeployment resources do not require manual
+  signaling like when using cloud-init as a software orchestration engine
 
 parameters:
 
@@ -49,35 +48,79 @@ parameters:
     constraints:
       - custom_constraint: neutron.network
 
-  public_network_id: 
+  public_network_id:
     label: Public Network ID
     type: string
 
-  message: 
-    label: Contents for index.html of http instance
-    type: string
-
-
 resources:
 
-  http_floating_ip:
+  boot_config:
+    type: Heat::InstallConfigAgent
+
+  instance:
+    type: OS::Nova::Server
+    properties:
+      name: ex5.2_instance
+      image: { get_param: image }
+      security_groups: 
+        - { get_param: security_group_icmp }
+        - { get_param: security_group_web }
+      key_name: { get_param: ssh_key }
+      flavor: { get_param: flavor }
+      networks: 
+        - network: { get_param: network_name }
+      user_data_format: SOFTWARE_CONFIG 
+      software_config_transport: POLL_SERVER_HEAT
+      user_data: { get_attr: [boot_config, config] } 
+
+  http_config:
+    type: OS::Heat::SoftwareConfig
+    properties:
+      group: script
+      config: |
+        #!/bin/bash
+        yum -y install httpd
+        echo "`date`" > /var/www/html/index.html
+        service httpd start
+
+  http_deployment:
+    type: OS::Heat::SoftwareDeployment
+    properties:
+      config: { get_resource: http_config }
+      server: { get_resource: instance }
+      signal_transport: HEAT_SIGNAL
+      actions:
+        - CREATE  
+        - UPDATE
+
+  dependent_instance:
+    type: OS::Nova::Server
+    depends_on: http_deployment
+    properties:
+      name: ex5.2_dependent
+      image: { get_param: image }
+      security_groups: 
+        - { get_param: security_group_icmp }
+        - { get_param: security_group_web }
+      key_name: { get_param: ssh_key }
+      flavor: { get_param: flavor }
+      networks: 
+        - network: { get_param: network_name }
+      user_data_format: RAW
+      user_data: 
+        str_replace: 
+          params: 
+            $floating_ip: { get_attr: [ instance, first_address ] } 
+          template: | 
+            #!/bin/bash
+            curl $floating_ip > /tmp/hello
+
+  floating_ip:
     type: Tutorial::FloatingIP
     properties:
-      public_network_id: { get_param: public_network_id } 
-      port: { get_attr: [http, port ] } 
-
-  http:
-    type: Tutorial::Application::HTTP
-    properties:
-      name: ex5.2
-      image: { get_param: image }
-      security_group_icmp: { get_param: security_group_icmp }
-      security_group_web: { get_param: security_group_web }
-      ssh_key: { get_param: ssh_key }
-      flavor: { get_param: flavor }
-      network_name: { get_param: network_name }
-      message: { get_param: message }
+      public_network_id: { get_param: public_network_id }
+      port: { get_attr: [dependent_instance, addresses, { get_param: network_name} ,0 , port] }
 
 outputs:
-  http_ipaddr:
-    value: { get_attr: [ http_floating_ip, floating_ip_address ] }
+  ipaddr:
+    value: { get_attr: [ floating_ip, floating_ip_address ] }

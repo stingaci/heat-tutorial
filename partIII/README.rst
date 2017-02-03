@@ -27,7 +27,7 @@ template can be referenced by specifying its path in the *type* attribute of
 the resource definition. The reader will also notice that each resource type 
 that is a template has certain properties and these properties are not the same 
 across all external templates. In fact properties of a resource that is a 
-template directly map to the inputs you define within that template. 
+template directly map to the parameters you define within that template. 
 Conversely, the outputs defined in a template become attributes of the resource 
 defined within in the main template.
 
@@ -47,13 +47,28 @@ is to create them as generic as possible. For example, in our previous
 exercises the CIDR for the subnet definition was hardcoded as opposed to the 
 *private_network.yaml* definition where an input parameter was used.
 
+A very important point to be made here relates to how heat will treat a 
+resource that is a template. Once a resource is determined to be a template, 
+heat will treat all resources within that template as one resource, not as 
+individual resources. This means that the state of the resource (template) will 
+not propagate from *CREATE_IN_PROGRESS* to *CREATE_COMPLETE* until all 
+resources from within that template all achieve a *CREATE_COMPLETE* status. The
+implications of this may not be apparent right now but this is an important 
+point to remember for future exercises. In order to actually visualize this 
+the reader is encouraged to use the following command to list all resources 
+of stack:
+
+.. code:: bash
+
+  openstack stack resource list <stack_name> 
+
 **Deployment**
 
 This template can be deployed as follows:
 
 .. code:: bash
 
-  os stack create -t ex3.1.yaml --parameter public_network_id=<public_network_id> --parameter application_name=full_stack ex3.1
+  openstack stack create -t ex3.1.yaml --parameter public_network_id=<public_network_id> --parameter application_name=full_stack ex3.1
 
 
 ex3.2.yaml
@@ -78,7 +93,7 @@ the reader will notice this file contains two sections. The *resource_registry*
 section contains entries that define a list of names each with their own path, 
 where the name becomes a resource type. The path can be a filepath, or URL as 
 well. So for example, a department can have a git repository containing generic 
-templates and the regular user can just create (or downloand an existing) 
+templates and the regular user can just create (or download an existing) 
 environment file that points to the repo. 
 
 Lastly, you'll notice there also is a parameters section, which allows the 

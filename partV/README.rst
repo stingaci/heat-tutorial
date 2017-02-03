@@ -15,7 +15,8 @@ os-apply-config, and os-refresh-config. Their job is to coordinate the reading,
 running, and updating of the software configuration that will be sent via Heat. 
 The following exercises assume that these agents don't exist on the image the 
 reader will be using. Ideally, these agents would be built in to the image that 
-you would use in a production environment. 
+you would use in a production environment for faster boot times and 
+consistency among running instances. 
 
 In order to use Software Deployments, these agents must be installed when the 
 instance starts up and thus cloud-init will be used to do so. The Heat 
@@ -25,7 +26,7 @@ repo under the `boot-config
 <https://github.com/openstack/heat-templates/tree/master/hot/software-config/boot-config>`_ 
 directory. The lib directory in this tutorial contains a slightly modified version 
 of the boot-config directory within the heat-templates repo to allow for 
-setting an http proxy as well as some Liberty specific configuration (note 
+setting an http proxy as well as some Liberty specific configuration (note:
 these changes have only been applied for the centos7_rdo_env.yaml environment). 
 The details of the installation and configuration of each particular agent is 
 outside of the scope of this tutorial. Instead, this tutorial will focus on how 
@@ -38,7 +39,7 @@ documentation alongside this tutorial.
 
 This would also be an appropriate time to quickly overview the stack update 
 command. It is very important to note that an update of a stack will only perform 
-an actual update if one or more resources have been modified within the 
+an actual update **if one or more resources have been modified** within the 
 template (this also includes input parameters and any change in an input 
 parameter will affect all resources referencing this particular input 
 parameter). This may an be an obvious point to the reader, however it is an 
@@ -70,7 +71,7 @@ ex5.1.yaml
 -----------
 
 This template introduces the basics of using Software Deployments to install 
-and configure a webserver
+and configure a webserver.
 
 **Notes**
 
@@ -126,7 +127,7 @@ the instance via a transport mechanism specified by the
 `software_config_transport 
 <http://docs.openstack.org/developer/heat/template_guide/openstack.html#OS::Nova::Server-prop-software_config_transport>`_ 
 attribute of OS::Nova::Server resource. The reader is encouraged to determine 
-the appropriate *software_config_transport* for their envrioment as it depends on 
+the appropriate *software_config_transport* for their environment as it depends on 
 how Heat was deployed as well as their public networking configuration. Also 
 whenever the instance uses software deployments the *user_data_property* should 
 be set to SOFTWARE_CONFIG to indicate the instance status will be updated via 
@@ -148,23 +149,34 @@ on a stack update (UPDATE). The default value is CREATE and UPDATE.
 
 To summarize, the instance spawns and uses the Heat::InstallConfigAgent 
 software configuration via the instance *user_data* attribute to install the 
-required agents to use Heat Software Deployments. When these agents startup 
-they use the transport mechanism specified by the *software_config_transport* 
+required agents to use Heat Software Deployments. At this point the instance 
+is in a *CREATE_IN_PROGRESS* state and the software deployment resource is in 
+a *INIT_COMPLETE* status as it depends on the uuid of the instance retrieved 
+by server: { get_resource: instance }. Once the instance starts up (even 
+though the config agents haven't finished installing yet -- like we've seen in 
+the previous part of the tutorial), the instance will be in a *CREATE_COMPLETE*
+status, and consequently the software deployment resource will achieve a 
+*CREATE_IN_PROGRESS* status as it could now retrieve the instance uuid. 
+
+When the agents are finally installed and they actually startup they use the 
+transport mechanism specified by the *software_config_transport* 
 attribute of the instance to gather the metadata of the software deployments 
-associated with this particular instance. At this point, all 
-OS::Heat::SoftwareDeployment resources associated with this instance as well as 
-the instance are in a *CREATE_IN_PROGRESS* state. The instance then use the 
+associated with this particular instance. The instance then use the 
 metadata to actually gather and apply the software configuration associated 
 with each software deployment resource. After it applied the software 
 configuration, the instance will use the signal mechanism specified by the 
 *signal_transport* attribute of each software deployment and signal to Heat so 
-that it can mark the SoftwareDeployment resource as *CREATE_COMPLETE*. When all 
-SoftwareDeployment resources that are associated with the instance are in a 
-*CREATE_COMPLETE* state, the instance also achieves a state of 
-*CREATE_COMPLETE*. 
+that it can mark the SoftwareDeployment resource as *CREATE_COMPLETE*.
 
-This means that unlike with cloud-init, the user is no longer responsible for 
-performing the signaling manually. This first template may seem 
+It is very important to note here that the status of the instance still enters 
+a *CREATE_COMPLETE* status before all software configurations are applied to 
+it, however the status of the software deployments are a clear indication of 
+the actual status of the instance in respect to software configurations, 
+and thus these can be used to determine when an instance has actually finished 
+applying all software configurations. 
+
+This means that unlike with cloud-init, the user is also no longer responsible 
+for performing the signaling manually. This first template may seem 
 over-complicated for what we already managed to achieve earlier in this 
 tutorial, however the advantages of Software Deployments will become apparent 
 in later exercises.  
@@ -187,10 +199,76 @@ This template can be deployed as follows:
 
 .. code:: bash
 
-  $ os stack create -t ex5.1.yaml -e env.yaml ex5.1
-
+  $ openstack stack create -t ex5.1.yaml -e env.yaml ex5.1
 
 ex5.2.yaml
+----------
+
+This exercise showcases that SoftwareDeployment resources do not require manual 
+signaling like when using cloud-init as a software orchestration engine
+
+**Notes** 
+
+Upon opening this file, the reader should notice, this template and scenario is
+very similar to ex4.6.yaml  which showed that while creating dependencies 
+between resources when using cloud-init, explicit signaling is required by user 
+via the use of the *OS::Heat::WaitCondition* and 
+*OS::Heat::WaitCondtionHandle** resources. This exercise showcases that this 
+not required while using SoftwareDeployments. It also illustrates how the 
+*depends_on* propriety can be used to create dependecies between resources. 
+
+The reader will notice a secondary instance definition in this template which
+has a *user_data* entry that looks as follows:
+
+.. code:: bash
+
+  user_data:
+    str_replace:
+      params:
+        $floating_ip: { get_attr: [ instance, first_address ] }
+      template: |
+        #!/bin/bash
+        curl $floating_ip > /tmp/hello
+
+As in ex4.6.yaml, this secondary instance tries to curl the IP address of the 
+initial instance. Although the *get_attr* function creates a dependency 
+between *instance* and *dependent_instance* that is not the dependency that 
+is required to ensure that *instance* has finished configuring its webserver.
+However, the *depends_on* attribute in the *dependent_instance* definition 
+does exactly that:
+
+.. code:: bash
+
+  depends_on: http_deployment
+
+This ensures that this the *dependent_instance* will not begin creating until
+the *http_deployment* resource has finished applying its software configuration 
+and thus ensuring the webserver is up and running. 
+
+Upon the successful deployment of this template the user can check the contents 
+of /tmp/hello file on the *instance* resource defined in the main template as 
+follows:
+
+.. code:: bash
+
+  $ ssh -i ../key-pairs/heat_key centos@<dependent_instnce_floating_ip> "cat /tmp/hello"
+
+And the resulting output should be:
+
+.. code:: text
+
+  Data gathered from http: Webservers are awesome!
+
+**Deployment**
+
+This template can be deployed as follows:
+
+.. code:: bash
+
+  $ openstack stack create -t ex5.2.yaml -e env.yaml ex5.2
+
+
+ex5.3.yaml
 ----------
 
 This exercise aims to illustrate how a webserver application template can be 
@@ -339,42 +417,13 @@ This stack can be created as follows:
 
 .. code:: bash
  
-  $ openstack stack create -t ex5.2.yaml -e env.yaml ex5.2 --parameter message="Action Create \`uptime\`"
+  $ openstack stack create -t ex5.3.yaml -e env.yaml ex5.3 --parameter message="Action Create \`uptime\`"
 
 and the stack can be updated as follows
 
 .. code:: bash
 
-  $ openstack stack update -t ex5.2.yaml -e env.yaml ex5.2 --parameter message="Action Update \`uptime\`"
-
-ex5.3.yaml
-----------
-
-This exercise showcases that SoftwareDeployment resources do not require manual 
-signaling like when using cloud-init as a software orchestration engine
-
-**Notes** 
-
-Upon opening this file, the reader should notice, this template is the exact 
-same template as ex4.6.yaml which showed that while creating dependencies 
-between resources when using cloud-init, explicit signaling is required by user 
-via the use of the *OS::Heat::WaitCondition* and 
-*OS::Heat::WaitCondtionHandle** resources. This exercise showcases that this 
-not required while using SoftwareDeployments. 
-
-Upon the successful deployment of this template the user can check the contents 
-of /tmp/hello file on the *instance* resource defined in the main template as 
-follows:
-
-.. code:: bash
-
-  $ ssh -i ../key-pairs/heat_key centos@<instnce_floating_ip> "cat /tmp/hello"
-
-And the resulting output should be:
-
-.. code:: text
-
-  Data gathered from http: Webservers are awesome!
+  $ openstack stack update -t ex5.3.yaml -e env.yaml ex5.3 --parameter message="Action Update \`uptime\`"
 
 ex5.4.yaml
 ----------
@@ -427,7 +476,7 @@ http instance that looks as follows:
 
 The config script contains three if statements, one for the init stage, one for dev 
 and another for prod. As specified by the comments, a git repo can be used and 
-the current $mode can be used to switch between different branches (ie. 
+the current *$mode* can be used to switch between different branches (ie. 
 dev/prod) of the repo. In this exercise, this is simulated with the use of of 
 *echo* commands. The reader will also notice two new properties, namely inputs 
 and outputs. The inputs section directly map to the *input_values* attribute of 
@@ -438,8 +487,22 @@ the SoftwareDeployment resource, in this case:
       input_values:
         mode: { get_param: server_mode }
 
+An important point to be made here relates to the input_values. The reader may 
+ask why we are passing in the input_values through the SoftwareDeployment
+resource and not directly into the SoftwareConfiguration resource, similar 
+to previous exercises via the use of the *str_replace* intrinsic function. 
+This has to do with the *stack update* command. At the beginning of this
+exercise the reader was reminded that only resources that have been modified 
+will be updated during such a command. If the parameters were to be 
+passed directly to the SoftwareConfiguration resource then only the 
+SoftwareConfiguration resource would be updated and on its own, this resource 
+type will not cause anything on an update. However, by passing it through 
+the SoftwareDeployment resource, this will ensure that the SoftwareDeployment 
+resource will be updated and depending on the actions attribute of this 
+resource, the linked software configuration resource will be applied again 
+to instance using these new parameters. 
 
-While the outputs section declares any number of output variables that can be 
+The outputs section declares any number of output variables that can be 
 used throughout the script in the form of 
 *$heat_outputs_path.<OUTPUT_VAR_NAME*, in this case: 
 *$heat_outputs_path.result*. This variable can then later be extracted in the 
@@ -463,6 +526,7 @@ section in this template looks as follows:
 
 The *-ax* switch in the script shebang will ensure output in deploy_stderr 
 as the script is run is debug mode. 
+
 
 **Deployment**
 
@@ -494,4 +558,4 @@ initialize index.html to some message for the webserver application template.
 In a more realistic environment, the webserver configuration section would 
 actually contain a configuration file (ie. httpd.conf, sites-available/conf, 
 etc) and a SofwareDeployment can be used to inject whatever content the 
-webserver should serve at runtime. Similar to this exercise. 
+webserver should serve at runtime. 
