@@ -36,7 +36,7 @@ determine the floating IP for the *jumphost*:
 
 .. code:: bash
 
-  $ openstack stack output show setup ipaddr
+  $ openstack stack output show setup jumphost_ip
 
 Lastly, check if you can ssh into the instance and if so use scp to put the 
 heat_key private key onto that server as we'll need it to log in to other 
