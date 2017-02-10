@@ -534,22 +534,19 @@ The stack can be created using:
 
 .. code:: bash
 
-  $ openstack stack create -t ex5.4.yaml -e env.yaml ex5.4 --parameter 
-  server_mode=init
+  $ openstack stack create -t ex5.4.yaml -e env.yaml ex5.4 --parameter server_mode=init
 
 It can be updated to dev using:
 
 .. code:: bash
 
-  $ openstack stack update -t ex5.4.yaml -e env.yaml ex5.4 --parameter 
-  server_mode=dev
+  $ openstack stack update -t ex5.4.yaml -e env.yaml ex5.4 --parameter server_mode=dev
 
 And it can be updated to prod using:
 
 .. code:: bash
 
-  $ openstack stack update -t ex5.4.yaml -e env.yaml ex5.4 --parameter 
-  server_mode=prod
+  $ openstack stack update -t ex5.4.yaml -e env.yaml ex5.4 --parameter server_mode=prod
 
 **Extras**
 
