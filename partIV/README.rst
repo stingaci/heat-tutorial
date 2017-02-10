@@ -461,8 +461,7 @@ signaled from an instance through a handle. This resource will change its
 state only after it receives the number of signals specified in the count 
 property. A timeout property specifies the time it will wait for those signals. 
 
-Basically any resource (such as an instance) that is associated with a 
-WaitConditionHandle will remain in the *CREATE_IN_PROGRESS* state until the 
+Basically the WaitConditionHandle will remain in the *CREATE_IN_PROGRESS* state until the 
 WaitCondition resource that is associated with that particular 
 WaitConditionHandle (in this case *wait_handle*) will receive a signal 
 indicating a SUCCESS status. 
