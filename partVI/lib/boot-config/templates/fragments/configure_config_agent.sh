@@ -1,8 +1,6 @@
 #!/bin/bash
 set -eux
 
-echo "10.2.16.32 a-wob.cloud.wob.vw.vwgroup.com" >> /etc/hosts
-
 # os-apply-config templates directory
 oac_templates=/usr/libexec/os-apply-config/templates
 mkdir -p $oac_templates/etc
