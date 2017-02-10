@@ -50,6 +50,10 @@ parameters:
   message:
     label: Initial content for index.html
     type: string
+    
+  name:
+    label: Instance Name
+    type: string  
 
 resources:
 
@@ -65,6 +69,7 @@ resources:
   instance:
     type: OS::Nova::Server
     properties:
+      name: { get_param: name }
       image: { get_param: image }
       security_groups: 
         - { get_param: security_group_icmp }
