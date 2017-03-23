@@ -55,7 +55,7 @@ parameters:
 
   server_mode: 
     label: Mode for webserver 
-    default: none
+    default: init
     type: string
 
 resources:
